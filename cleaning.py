@@ -5,6 +5,8 @@ import math
 from datetime import datetime
 from datetime import date
 import category_encoders as ce
+from sklearn.impute import SimpleImputer
+from collections import Counter
 
 
 def merge_dataframe(file):
@@ -30,9 +32,8 @@ def merge_dataframe(file):
     # drop la latitude et longitude car donnees redondantes
     # drop de name, abbr et tel car donnees anonymisees
     # drop de restaurant_id et member_it car donnees anonymisees
-    # drop de cityarea et city_member car trop de données manquantes
     # drop de timezone et locale car données récurentes (on sait déjà que c'est à Taiwan...)
-    df = df.drop(["lat", "lng", "name", "abbr", "tel", "cityarea", "city_member", "opening_hours", "timezone", "locale"], axis=1)
+    df = df.drop(["lat", "lng", "name", "abbr", "tel", "opening_hours", "timezone", "locale"], axis=1)
 
     return df
 
@@ -86,16 +87,31 @@ def drop_hours(df):
 
     try:
         for elt in df["cdate_train"]:
-            cdate_train.append(elt.split(" ")[0])
+            if type(elt) != float:
+                cdate_train.append(elt.split(" ")[0])
+            else:
+                cdate_train.append(np.nan)
     except:
         for elt in df["cdate_test"]:
-            cdate_test.append(elt.split(" ")[0])
+            if type(elt) != float:
+                cdate_test.append(elt.split(" ")[0])
+            else:
+                cdate_test.append(np.nan)
     for elt in df["datetime"]:
-        datetime.append(elt.split(" ")[0])
+        if type(elt) != float:
+            datetime.append(elt.split(" ")[0])
+        else:
+            datetime.append(np.nan)
     for elt in df["cdate_member"]:
-        cdate_member.append(elt.split(" ")[0])
+        if type(elt) != float:
+            cdate_member.append(elt.split(" ")[0])
+        else:
+            cdate_member.append(np.nan)
     for elt in df["cdate_restaurant"]:
-        cdate_restaurant.append(elt.split(" ")[0])
+        if type(elt) != float:
+            cdate_restaurant.append(elt.split(" ")[0])
+        else:
+            cdate_restaurant.append(np.nan)
 
     try:
         df["cdate_train"] = cdate_train
@@ -122,14 +138,24 @@ def split_date(df):
         year = []
         try:
             for elt in df[column]:
-                month.append(float(elt.split("/")[0]))
-                day.append(float(elt.split("/")[1]))
-                year.append(float(elt.split("/")[2]))
+                if type(elt) != float:
+                    month.append(float(elt.split("/")[0]))
+                    day.append(float(elt.split("/")[1]))
+                    year.append(float(elt.split("/")[2]))
+                else:
+                    month.append(np.nan)
+                    day.append(np.nan)
+                    year.append(np.nan)
         except:
             for elt in df["cdate_test"]:
-                month.append(float(elt.split("/")[0]))
-                day.append(float(elt.split("/")[1]))
-                year.append(float(elt.split("/")[2]))
+                if type(elt) != float:
+                    month.append(float(elt.split("/")[0]))
+                    day.append(float(elt.split("/")[1]))
+                    year.append(float(elt.split("/")[2]))
+                else:
+                    month.append(np.nan)
+                    day.append(np.nan)
+                    year.append(np.nan)
             df["cdate_test_month"] = month
             df["cdate_test_day"] = day
             df["cdate_test_year"] = year
@@ -182,12 +208,37 @@ def birthdate_clean(df):
     return df
 
 
+def fillna_data(df):
+    """
+        Remplit les valeurs manquantes par la médianne pour les valeurs numériques et par la plus fréquente pour les valeurs catégorielles
+    """
+
+    numerical_list = ['price1', 'price2']
+    categorial_list = ['purpose', 'city_member', 'cityarea', 'is_vip', 'gender_y', 'has_google_id', 'has_yahoo_id', 'has_weibo_id', 'cdate_member_month', 'cdate_member_day',
+    'cdate_member_year', 'is_hotel', 'country', 'currency', 'city_restaurant', 'good_for_family', 'accept_credit_card', 'parking',
+    'outdoor_seating', 'wifi', 'wheelchair_accessible', 'cdate_restaurant', 'cdate_member_month', 'cdate_member_day', 'cdate_member_year',
+    'cdate_restaurant_month', 'cdate_restaurant_day', 'cdate_restaurant_year']
+
+
+    for column in numerical_list:
+        imp_median = SimpleImputer(missing_values=np.nan, strategy='median')
+        imp_median = imp_median.fit(df[[column]])
+        df[column] = imp_median.transform(df[[column]]).ravel()
+
+    for column in categorial_list:
+        imp_most_frequent = SimpleImputer(missing_values=np.nan, strategy='most_frequent')
+        imp_most_frequent = imp_most_frequent.fit(df[[column]])
+        df[column] = imp_most_frequent.transform(df[[column]]).ravel()
+
+    return df
+
+
 def categorial_to_ordinal(df):
     """
         Transforme les données catégorielles (purpose, gender_x, status, gender_y, country, currency, city_restaurant) en données ordinales
     """
 
-    categorial_list = ['purpose', 'gender_x', 'status', 'gender_y', 'country', 'currency', 'city_restaurant']
+    categorial_list = ['purpose', 'gender_x', 'status', 'gender_y', 'country', 'currency', 'city_restaurant', 'city_member', 'cityarea']
 
     for column in categorial_list:
         ce_ord = ce.OrdinalEncoder(cols = [column])
@@ -198,7 +249,7 @@ def categorial_to_ordinal(df):
 
 def city_member_to_nan(df):
     """
-        Transforme correctement les données en NaN
+        Transforme correctement les données de city_member en NaN
     """
     cities = []
     for city in df["city_member"]:
@@ -234,33 +285,9 @@ def number_of_nan(df):
     return dict
 
 
-def int_to_float(df):
-
-    people = []
-    prepay = []
-    return90 = []
-
-    for elt in df["people"]:
-        people.append(float(elt))
-    for elt in df["is_required_prepay_satisfied"]:
-        prepay.append(float(elt))
-    try:
-        for elt in df["return90"]:
-            return90.append(float(elt))
-    except:
-        pass
-
-    df["people"] = people
-    df["is_required_prepay_satisfied"] = prepay
-    try:
-        df["return90"] = return90
-    except:
-        pass
-
-    return df
-
 
 if __name__ == '__main__':
+
     df_train = merge_dataframe("Train.csv")
     df_test = merge_dataframe("Test.csv")
 
@@ -268,32 +295,30 @@ if __name__ == '__main__':
 
     df_train = date_format(df_train)
     df_train = birthdate_clean(df_train)
-    # df_train = city_member_to_nan(df_train)
-    df_train = df_train.dropna()
-    df_train = int_to_float(df_train)
     df_train = drop_hours(df_train)
     df_train = split_date(df_train)
+    df_train = city_member_to_nan(df_train)
+    df_train = fillna_data(df_train)
     df_train = categorial_to_ordinal(df_train)
-    # print(Index(df_train["city_member"].value_counts()).get_loc("9407"))
 
-    # print(type(df_train["ord_purpose"][0]))
+
+    # print(number_of_nan(df_train))
 
 
 ####################### TEST ###########################
 
     df_test = date_format(df_test)
     df_test = birthdate_clean(df_test)
-    # df_test = city_member_to_nan(df_test)
-    df_test = df_test.dropna()
-    df_test = int_to_float(df_test)
     df_test = drop_hours(df_test)
     df_test = split_date(df_test)
+    df_test = city_member_to_nan(df_test)
+    df_test = fillna_data(df_test)
     df_test = categorial_to_ordinal(df_test)
 
-########################################################
+    # print(number_of_nan(df_test))
 
-    # for k,v in number_of_nan(df).items():
-    #     print(k, v)
+
+########################################################
 
     # print(df_train)
     # print("--------------------------")

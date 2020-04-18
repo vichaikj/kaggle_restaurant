@@ -12,7 +12,7 @@ df_test = pd.read_csv("df_test.csv", encoding="UTF-8", sep=",")
 X = df_train[['cdate_train_month', 'cdate_train_day', 'cdate_train_year', 'datetime_month', 'datetime_day', 'datetime_year', 'people', 'ord_purpose', 'ord_gender_x', 'ord_status',
 'is_required_prepay_satisfied', 'is_vip', 'ord_gender_y', 'birthdate_month', 'birthdate_day', 'birthdate_year', 'has_google_id', 'has_yahoo_id', 'has_weibo_id',
 'cdate_member_month', 'cdate_member_day', 'cdate_member_year', 'is_hotel', 'ord_country', 'ord_currency', 'ord_city_restaurant', 'good_for_family', 'accept_credit_card',
-'parking', 'outdoor_seating', 'wifi', 'wheelchair_accessible', 'price1', 'price2', 'cdate_restaurant_month', 'cdate_restaurant_day', 'cdate_restaurant_year']]  # Features
+'parking', 'outdoor_seating', 'wifi', 'wheelchair_accessible', 'price1', 'price2', 'cdate_restaurant_month', 'cdate_restaurant_day', 'cdate_restaurant_year', 'ord_city_member', 'ord_cityarea']]  # Features
 
 y = df_train['return90']  # Labels
 
@@ -24,18 +24,33 @@ clf = RandomForestClassifier(n_estimators=100)
 clf.fit(X_train,y_train)
 
 
-# X_test_submit = df_test[['cdate_train_month', 'cdate_train_day', 'cdate_train_year', 'datetime_month', 'datetime_day', 'datetime_year', 'people', 'ord_purpose', 'ord_gender_x', 'ord_status',
-# 'is_required_prepay_satisfied', 'is_vip', 'ord_gender_y', 'birthdate_month', 'birthdate_day', 'birthdate_year', 'has_google_id', 'has_yahoo_id', 'has_weibo_id',
-# 'cdate_member_month', 'cdate_member_day', 'cdate_member_year', 'is_hotel', 'ord_country', 'ord_currency', 'ord_city_restaurant', 'good_for_family', 'accept_credit_card',
-# 'parking', 'outdoor_seating', 'wifi', 'wheelchair_accessible', 'price1', 'price2', 'cdate_restaurant_month', 'cdate_restaurant_day', 'cdate_restaurant_year']]
+X_test_submit = df_test[['cdate_train_month', 'cdate_train_day', 'cdate_train_year', 'datetime_month', 'datetime_day', 'datetime_year', 'people', 'ord_purpose', 'ord_gender_x', 'ord_status',
+'is_required_prepay_satisfied', 'is_vip', 'ord_gender_y', 'birthdate_month', 'birthdate_day', 'birthdate_year', 'has_google_id', 'has_yahoo_id', 'has_weibo_id',
+'cdate_member_month', 'cdate_member_day', 'cdate_member_year', 'is_hotel', 'ord_country', 'ord_currency', 'ord_city_restaurant', 'good_for_family', 'accept_credit_card',
+'parking', 'outdoor_seating', 'wifi', 'wheelchair_accessible', 'price1', 'price2', 'cdate_restaurant_month', 'cdate_restaurant_day', 'cdate_restaurant_year', 'ord_city_member', 'ord_cityarea']]
 
 
-y_pred = clf.predict(X_test)
+# y_pred = clf.predict(X_test)
 
-# y_pred = clf.predict(X_test_submit)
+y_pred = clf.predict_proba(X_test_submit)
+
+# print(y_pred[0][1])
+
+return90 = []
+booking_id = []
+
+for elt in y_pred:
+    return90.append(elt[1])
+
+for elt in df_test["booking_id"]:
+    booking_id.append(elt)
+
+submit = pd.DataFrame({"booking_id":booking_id, "return90":return90})
+
+submit.to_csv("./submit.csv", index=False)
 
 
 # print(y_pred)
 
-print("Accuracy:", metrics.accuracy_score(y_test, y_pred))
+# print("Accuracy:", metrics.accuracy_score(y_test, y_pred))
 # metrics.plot_roc_curve(clf, X_test, Y_test)
